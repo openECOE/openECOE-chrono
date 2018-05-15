@@ -18,21 +18,23 @@ class Round:
     def __init__(self, id, schedules, num_reruns):
         self.id = id
         self.namespace = '/round%d' % id
-        self.chrono = Chrono(id)
+        self.chrono = Chrono(id, self.namespace)
         self.schedules = schedules
         self.num_reruns = num_reruns
 
     def start(self):
 
-        for reruns in range(self.num_reruns):
+        for n_rerun in range(1, self.num_reruns + 1):
 
             for schedule in self.schedules:
 
+                socketio.emit('init_stage', {'num_rerun': n_rerun}, namespace=self.namespace)
                 self.chrono.play(duration=schedule['duracion'], events=schedule['eventos'], stage=schedule['fase'])
-                socketio.sleep(0.5)
+
+                socketio.sleep(1)
                 self.chrono.reset()
 
-        socketio.emit('end', {'data': 'Fin rueda %s' % self.id}, namespace=self.namespace)
+        socketio.emit('end_round', {'data': 'Fin rueda %s' % self.id}, namespace=self.namespace)
 
 
 class Chrono:
@@ -42,9 +44,9 @@ class Chrono:
     PAUSED = 2
     FINISHED = 3
 
-    def __init__(self, id, minutes=0, seconds=0):
+    def __init__(self, id, namespace, minutes=0, seconds=0):
         self.id = id
-        self.namespace = '/round%d' % id
+        self.namespace = namespace
         self.minutes = minutes
         self.seconds = seconds
         self.state = Chrono.CREATED
@@ -86,6 +88,7 @@ class Chrono:
                     socketio.emit('evento',
                                   {
                                       'data': e['accion'],
+                                      'stage': stage,
                                       'target': ','.join(map(str, e['estaciones']))
                                   },
                                   namespace=self.namespace)

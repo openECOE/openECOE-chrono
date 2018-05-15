@@ -12,13 +12,19 @@
                 $("#log").append('Conectado para monitorizacion de rueda {{ r.id }}<br>');
             });
 
-            socket{{ r.id }}.on('end', function(msg) {
+            socket{{ r.id }}.on('end_round', function(msg) {
                 $('#clock{{ r.id }}').css("color", "green");
                 $('#log').append("<span style='color:blue'>"+msg.data+"</span><br>");
             });
 
+            socket{{ r.id }}.on('init_stage', function(msg) {
+                $('#clock{{ r.id }}').fadeOut('fast').fadeIn('fast', function () {
+                    $('#vuelta{{ r.id }}').text(msg.num_rerun);
+                });
+            });
+
             socket{{ r.id }}.on('tic_tac', function(msg) {
-                $('#clock{{ r.id }}').text(msg.minutes + ":" + msg.seconds + " " + msg.stage);
+                $('#clock{{ r.id }}').text(msg.stage + " " + msg.minutes + ":" + msg.seconds);
 
                 if (msg.stopped == 'S') {
                     $('#clock{{ r.id }}').css("color", "red");
@@ -35,7 +41,7 @@
 <body>
     {% for r in rounds %}
 
-        <div><h1>Rueda {{ r.id }}: <span id="clock{{ r.id }}">--:--</span></h1></div>
+        <div><h1>Rueda {{ r.id }} (vuelta <span id="vuelta{{ r.id }}"></span>): <span id="clock{{ r.id }}">--:--</span></h1></div>
 
     {% endfor %}
     <br>
