@@ -18,7 +18,7 @@
             });
 
             socket{{ r.id }}.on('tic_tac', function(msg) {
-                $('#clock{{ r.id }}').text(msg.minutes + ":" + msg.seconds);
+                $('#clock{{ r.id }}').text(msg.minutes + ":" + msg.seconds + " " + msg.stage);
 
                 if (msg.stopped == 'S') {
                     $('#clock{{ r.id }}').css("color", "red");

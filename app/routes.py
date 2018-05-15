@@ -1,5 +1,5 @@
 from . import socketio, app
-from .classes import Chrono
+from .classes import Manager
 
 from flask import render_template, request
 
@@ -11,24 +11,24 @@ def index(station_id, round_id):
 
 @app.route('/admin')
 def admin():
-    return render_template('admin.html', rounds=app.chronos)
+    return render_template('admin.html', rounds=app.ecoe_rounds)
 
 
 def manage_chronos(active, round_id):
 
     if round_id is None:
-        for chrono in app.chronos:
+        for e_round in app.ecoe_rounds:
             if active:
-                chrono.activate()
+                e_round.chrono.activate()
             else:
-                chrono.pause()
+                e_round.chrono.pause()
     else:
-        chronos = [c for c in app.chronos if c.id == round_id]
+        e_rounds = [c for c in app.ecoe_rounds if c.id == round_id]
 
         if active:
-            chronos[0].activate()
+            e_rounds[0].chrono.activate()
         else:
-            chronos[0].pause()
+            e_rounds[0].chrono.pause()
 
 
 @app.route('/pause')
@@ -51,7 +51,7 @@ def play_chronos(round_id=None):
 
 def has_threads_alive():
 
-    return len(app.chr_threads) > 0 or True in [t.is_alive() for t in app.chr_threads]
+    return True in [t.is_alive() for t in app.ecoe_threads]
 
 
 @app.route('/load', methods=['POST'])
@@ -59,12 +59,7 @@ def load_configuration():
 
     if not has_threads_alive():
 
-        data = request.get_json()
-
-        del app.chronos[:]
-
-        for r in data['rounds']:
-            app.chronos.append(Chrono(r['id'], data['seconds'], r['events']))
+        Manager.create_config(request.get_json())
 
         return 'OK', 200
     else:
@@ -76,8 +71,8 @@ def start_chronos():
 
     if not has_threads_alive():
 
-        for chrono in app.chronos:
-            app.chr_threads.append(socketio.start_background_task(target=chrono.play))
+        for e_round in app.ecoe_rounds:
+            app.ecoe_threads.append(socketio.start_background_task(target=e_round.start))
 
         return 'OK', 200
     else:

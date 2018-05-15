@@ -1,19 +1,38 @@
 import time
-from app import socketio
+from app import socketio, app
+
+
+class Manager:
+
+    @staticmethod
+    def create_config(config):
+
+        del app.ecoe_rounds[:]
+
+        for round_id in config['ruedas']:
+            app.ecoe_rounds.append(Round(round_id, config['planificaciones'], config['vueltas']))
 
 
 class Round:
 
-    def __init__(self, id, events):
+    def __init__(self, id, schedules, num_reruns):
         self.id = id
         self.namespace = '/round%d' % id
-        self.chrono = None
-        self.events = events
+        self.chrono = Chrono(id)
+        self.schedules = schedules
+        self.num_reruns = num_reruns
 
     def start(self):
 
-        self.chrono.play(self.namespace, self.events)
-        socketio.emit('end', {'data': 'Fin ecoe round %s' % self.id}, namespace=self.namespace)
+        for reruns in range(self.num_reruns):
+
+            for schedule in self.schedules:
+
+                self.chrono.play(duration=schedule['duracion'], events=schedule['eventos'], stage=schedule['fase'])
+                socketio.sleep(0.5)
+                self.chrono.reset()
+
+        socketio.emit('end', {'data': 'Fin rueda %s' % self.id}, namespace=self.namespace)
 
 
 class Chrono:
@@ -23,20 +42,24 @@ class Chrono:
     PAUSED = 2
     FINISHED = 3
 
-    def __init__(self, id, duration, events=[], minutes=0, seconds=0):
+    def __init__(self, id, minutes=0, seconds=0):
         self.id = id
-        self.duration = duration
         self.namespace = '/round%d' % id
-        self.events = events
         self.minutes = minutes
         self.seconds = seconds
         self.state = Chrono.CREATED
 
-    def play(self):
+    def reset(self):
+
+        self.state = Chrono.CREATED
+        self.minutes = 0
+        self.seconds = 0
+
+    def play(self, duration, events, stage):
 
         self.activate()
 
-        for t in range(self.duration + 1):
+        for t in range(duration + 1):
 
             if t % 60 == 0 and self.seconds == 59:
                 self.minutes += 1
@@ -48,7 +71,8 @@ class Chrono:
                           {
                               'minutes': '{:02d}'.format(self.minutes),
                               'seconds': '{:02d}'.format(self.seconds),
-                              'stopped': 'S' if self.is_paused() else 'N'
+                              'stopped': 'S' if self.is_paused() else 'N',
+                              'stage': stage
                           },
                           namespace=self.namespace)
 
@@ -56,23 +80,21 @@ class Chrono:
                 socketio.sleep(0.5)
 
             # send events
-            for e in self.events:
+            for e in events:
                 if e['t'] == t:
-                    print (time.strftime("%H:%M:%S") + " Rueda %d enviando evento en t = %d para %s" % (self.id, t, ','.join(map(str, e['estaciones']))))
+                    print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage, self.id, t, ','.join(map(str, e['estaciones']))))
                     socketio.emit('evento',
                                   {
-                                      'data': e['salida'],
+                                      'data': e['accion'],
                                       'target': ','.join(map(str, e['estaciones']))
                                   },
                                   namespace=self.namespace)
 
-            if t == self.duration:
+            if t == duration:
                 self.stop()
                 break
 
             socketio.sleep(1)
-
-        socketio.emit('end', {'data': 'Round %s ended' % self.id}, namespace=self.namespace)
 
     def activate(self):
         self.state = Chrono.RUNNING

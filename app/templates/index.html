@@ -22,7 +22,7 @@
 
         socket.on('evento', function(msg) {
             //el crono ya no esta bloqueado
-            $('#clock').css("color", "black");
+            //$('#clock').css("color", "black");
 
             if (jQuery.inArray({{ station_id }}+"", msg.target.split(",")) >= 0) {
                 $('#log').append("<span style='color:green'>" + msg.data + " => " + msg.target + "</span><br>");
@@ -30,7 +30,7 @@
         });
 
         socket.on('tic_tac', function(msg) {
-            $('#clock').text(msg.minutes + ":" + msg.seconds);
+            $('#clock').text(msg.minutes + ":" + msg.seconds + " " + msg.stage);
 
             if (msg.stopped == 'S') {
                 $('#clock').css("color", "red");
