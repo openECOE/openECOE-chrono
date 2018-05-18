@@ -88,6 +88,7 @@ class Chrono:
                     socketio.emit('evento',
                                   {
                                       'data': e['accion'],
+                                      'sound': e['sound'],
                                       'stage': stage,
                                       'target': ','.join(map(str, e['estaciones']))
                                   },
