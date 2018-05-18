@@ -23,6 +23,11 @@
                 });
             });
 
+            socket{{ r.id }}.on('aborted', function(msg) {
+                $('#clock{{ r.id }}').css("color", "red");
+                $('#clock{{ r.id }}').text("EVALUACIÓN ABORTADA");
+            });
+
             socket{{ r.id }}.on('tic_tac', function(msg) {
                 $('#clock{{ r.id }}').text(msg.stage + " " + msg.minutes + ":" + msg.seconds);
 

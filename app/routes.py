@@ -14,6 +14,16 @@ def admin():
     return render_template('admin.html', rounds=app.ecoe_rounds)
 
 
+@app.route('/abort')
+def abort_all():
+
+    for e_round in app.ecoe_rounds:
+        e_round.abort()
+        e_round.chrono.stop()
+
+    return '', 200
+
+
 def manage_chronos(active, round_id):
 
     if round_id is None:

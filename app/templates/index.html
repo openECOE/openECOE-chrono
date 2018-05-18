@@ -30,6 +30,11 @@
             }
         });
 
+        socket.on('aborted', function(msg) {
+            $('#clock').css("color", "red");
+            $('#clock').text("EVALUACIÓN ABORTADA");
+        });
+
         socket.on('tic_tac', function(msg) {
             $('#clock').text(msg.stage + " " + msg.minutes + ":" + msg.seconds);
 
