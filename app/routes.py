@@ -14,7 +14,7 @@ def admin():
     return render_template('admin.html', rounds=app.ecoe_rounds)
 
 
-@app.route('/abort')
+@app.route('/abort', methods=['POST'])
 def abort_all():
 
     for e_round in app.ecoe_rounds:
