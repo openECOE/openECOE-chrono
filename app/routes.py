@@ -73,7 +73,7 @@ def load_configuration():
 
         return 'OK', 200
     else:
-        return 'Not loaded: chronos already started', 200
+        return 'No cargado porque los cronos ya están iniciados', 409
 
 
 @app.route('/start')
@@ -86,7 +86,7 @@ def start_chronos():
 
         return 'OK', 200
     else:
-        return 'Already started', 200
+        return 'Cronos ya iniciados', 409
 
 
 ###############################
