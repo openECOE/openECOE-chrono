@@ -26,7 +26,7 @@
 
         socket.on('evento', function(msg) {
             if (jQuery.inArray({{ station_id }}+"", msg.target.split(",")) >= 0) {
-                $('#log').append("<span style='color:green'>[" + msg.stage + "] " + msg.data + " => " + msg.target + "</span><br>");
+                $('#log').append("<span style='color:green'>[" + msg.stage.fase + "] " + msg.data + " => " + msg.target + "</span><br>");
             }
         });
 
@@ -36,7 +36,7 @@
         });
 
         socket.on('tic_tac', function(msg) {
-            $('#clock').text(msg.stage + " " + msg.minutes + ":" + msg.seconds);
+            $('#clock').text(msg.stage.fase + " " + msg.minutes + ":" + msg.seconds);
 
             if (msg.stopped == 'S') {
                 $('#clock').css("color", "red");
