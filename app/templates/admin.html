@@ -19,7 +19,7 @@
 
             socket{{ r.id }}.on('init_stage', function(msg) {
                 $('#clock{{ r.id }}').fadeOut('fast').fadeIn('fast', function () {
-                    $('#vuelta{{ r.id }}').text(msg.num_rerun);
+                    $('#vuelta{{ r.id }}').text(msg.num_rerun + "/" + msg.total_reruns);
                 });
             });
 
@@ -29,11 +29,12 @@
             });
 
             socket{{ r.id }}.on('tic_tac', function(msg) {
-                $('#clock{{ r.id }}').text(msg.stage + " " + msg.minutes + ":" + msg.seconds);
+                $('#clock{{ r.id }}').text(msg.stage.fase + " " + msg.minutes + ":" + msg.seconds);
+                $('#vuelta{{ r.id }}').text(msg.num_rerun + "/" + msg.total_reruns);
 
                 if (msg.stopped == 'S') {
                     $('#clock{{ r.id }}').css("color", "red");
-                    $('#log').append("<span style='color:red'>"+instant(msg.minutes, msg.seconds)+" Crono parado</span><br>");
+                    $('#log').append("<span style='color:red'>[" + msg.minutes + ":" + msg.seconds + "] Crono parado</span><br>");
                 }
                 else
                     $('#clock{{ r.id }}').css("color", "black");

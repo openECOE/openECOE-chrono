@@ -44,8 +44,9 @@ class Round:
                 if self.is_aborted():
                     break
 
-                socketio.emit('init_stage', {'num_rerun': n_rerun}, namespace=self.namespace)
-                self.chrono.play(duration=schedule['duracion'], events=schedule['eventos'], stage=schedule['fase'])
+                socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns}, namespace=self.namespace)
+
+                self.chrono.play(schedule, current_rerun=n_rerun, total_reruns=self.num_reruns)
 
                 socketio.sleep(1)
                 self.chrono.reset()
@@ -78,7 +79,23 @@ class Chrono:
         self.minutes = 0
         self.seconds = 0
 
-    def play(self, duration, events, stage):
+    def _create_tic_tac_dict(self, t, current_rerun, total_reruns, schedule):
+
+        return {
+            't': t,
+            'minutes': '{:02d}'.format(self.minutes),
+            'seconds': '{:02d}'.format(self.seconds),
+            'stopped': 'S' if self.is_paused() else 'N',
+            'num_rerun': current_rerun,
+            'total_reruns': total_reruns,
+            'stage': schedule
+        }
+
+    def play(self, schedule, current_rerun, total_reruns):
+
+        duration = schedule['duracion']
+        events = schedule['eventos']
+        stage_name = schedule['fase']
 
         self.activate()
 
@@ -93,27 +110,23 @@ class Chrono:
             else:
                 self.seconds = t % 60
 
-            socketio.emit('tic_tac',
-                          {
-                              'minutes': '{:02d}'.format(self.minutes),
-                              'seconds': '{:02d}'.format(self.seconds),
-                              'stopped': 'S' if self.is_paused() else 'N',
-                              'stage': stage
-                          },
-                          namespace=self.namespace)
+            tic_tac = self._create_tic_tac_dict(t, current_rerun, total_reruns, schedule)
+
+            socketio.emit('tic_tac', tic_tac, namespace=self.namespace)
 
             while self.is_paused():
+                socketio.emit('tic_tac', tic_tac, namespace=self.namespace)
                 socketio.sleep(0.5)
 
             # send events
             for e in events:
                 if e['t'] == t:
-                    print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage, self.id, t, ','.join(map(str, e['estaciones']))))
+                    print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage_name, self.id, t, ','.join(map(str, e['estaciones']))))
                     socketio.emit('evento',
                                   {
                                       'data': e['accion'],
                                       'sound': e['sound'],
-                                      'stage': stage,
+                                      'stage': schedule,
                                       'target': ','.join(map(str, e['estaciones']))
                                   },
                                   namespace=self.namespace)
