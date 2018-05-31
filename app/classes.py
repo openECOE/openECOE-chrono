@@ -45,7 +45,7 @@ class Round:
                     break
 
                 socketio.emit('init_stage', {'num_rerun': n_rerun}, namespace=self.namespace)
-                self.chrono.play(duration=schedule['duracion'], events=schedule['eventos'], stage=schedule['fase'])
+                self.chrono.play(duration=schedule['duracion'], events=schedule['eventos'], stage=schedule['fase'], num_rerun=n_rerun)
 
                 socketio.sleep(1)
                 self.chrono.reset()
@@ -78,7 +78,7 @@ class Chrono:
         self.minutes = 0
         self.seconds = 0
 
-    def play(self, duration, events, stage):
+    def play(self, duration, events, stage, num_rerun):
 
         self.activate()
 
@@ -98,6 +98,7 @@ class Chrono:
                               'minutes': '{:02d}'.format(self.minutes),
                               'seconds': '{:02d}'.format(self.seconds),
                               'stopped': 'S' if self.is_paused() else 'N',
+                              'num_rerun': num_rerun,
                               'stage': stage
                           },
                           namespace=self.namespace)

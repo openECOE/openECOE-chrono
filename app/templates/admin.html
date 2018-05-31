@@ -30,6 +30,7 @@
 
             socket{{ r.id }}.on('tic_tac', function(msg) {
                 $('#clock{{ r.id }}').text(msg.stage + " " + msg.minutes + ":" + msg.seconds);
+                $('#vuelta{{ r.id }}').text(msg.num_rerun);
 
                 if (msg.stopped == 'S') {
                     $('#clock{{ r.id }}').css("color", "red");
