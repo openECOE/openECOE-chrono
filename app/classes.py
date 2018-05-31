@@ -78,6 +78,17 @@ class Chrono:
         self.minutes = 0
         self.seconds = 0
 
+    def _create_tic_tac_dict(self, t, num_rerun, stage):
+
+        return {
+            't': t,
+            'minutes': '{:02d}'.format(self.minutes),
+            'seconds': '{:02d}'.format(self.seconds),
+            'stopped': 'S' if self.is_paused() else 'N',
+            'num_rerun': num_rerun,
+            'stage': stage
+        }
+
     def play(self, duration, events, stage, num_rerun):
 
         self.activate()
@@ -93,17 +104,12 @@ class Chrono:
             else:
                 self.seconds = t % 60
 
-            socketio.emit('tic_tac',
-                          {
-                              'minutes': '{:02d}'.format(self.minutes),
-                              'seconds': '{:02d}'.format(self.seconds),
-                              'stopped': 'S' if self.is_paused() else 'N',
-                              'num_rerun': num_rerun,
-                              'stage': stage
-                          },
-                          namespace=self.namespace)
+            tic_tac = self._create_tic_tac_dict(t, num_rerun, stage)
+
+            socketio.emit('tic_tac', tic_tac, namespace=self.namespace)
 
             while self.is_paused():
+                socketio.emit('tic_tac', tic_tac, namespace=self.namespace)
                 socketio.sleep(0.5)
 
             # send events
