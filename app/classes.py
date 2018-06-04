@@ -121,7 +121,8 @@ class Chrono:
             # send events
             for e in events:
                 if e['t'] == t:
-                    print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage_name, self.id, t, ','.join(map(str, e['stations']))))
+                    # TODO: Change print values to UTF8 or use logger library
+                    #print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage_name, self.id, t, ','.join(map(str, e['stations']))))
                     socketio.emit('evento',
                                   {
                                       'data': e['message'],
