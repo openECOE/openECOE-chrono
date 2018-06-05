@@ -74,9 +74,9 @@ class Round:
     def status_filename(self):
         return 'round.%d.status' % self.id
 
-    def start(self, current_rerun=1, idx_schedule=0):
+    def start(self, state=RUNNING, current_rerun=1, idx_schedule=0):
 
-        self.state = Round.RUNNING
+        self.state = state
 
         for n_rerun in range(current_rerun, self.num_reruns + 1):
 
@@ -92,6 +92,9 @@ class Round:
 
                 socketio.sleep(1)
                 self.chrono.reset()
+
+            # reset index for next iteration
+            idx_schedule = 0
 
             if self.is_aborted():
                 socketio.emit('aborted', {}, namespace=self.namespace)
@@ -205,7 +208,6 @@ class Chrono:
 
     def stop(self):
         self.state = Chrono.FINISHED
-
         Manager.delete_file(self.status_filename)
 
     def pause(self):

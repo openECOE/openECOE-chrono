@@ -24,36 +24,7 @@ from app import routes
 """
 Reload configuration if exists on start
 """
-# json_file = None
-#
-# try:
-#     json_file = open('ecoe_config.json', 'r')
-#     ecoe_config = json.load(json_file)
-#     json_file.close()
-#
-#     # 1. Create configuration in app memory
-#     from .classes import Manager, Round, Chrono
-#     Manager.create_config(ecoe_config)
-#
-#     # 2. Load objects
-#     for e_round in app.ecoe_rounds:
-#
-#         round_status = Round.load_status_from_file(e_round.status_filename)
-#         e_round.state = round_status['state']
-#
-#         chrono_status = Chrono.load_status_from_file(e_round.chrono.status_filename)
-#         e_round.chrono.minutes = chrono_status['minutes']
-#         e_round.chrono.seconds = chrono_status['seconds']
-#         e_round.chrono.state = chrono_status['state']
-#
-#         app.ecoe_threads.append(socketio.start_background_task(target=e_round.start, current_rerun=round_status['current_rerun'], idx_schedule=round_status['current_idx_schedule']))
-# except:
-#     pass
-# finally:
-#     if json_file:
-#         json_file.close()
 
-#####################################
 ecoe_config = None
 
 try:
@@ -71,16 +42,18 @@ if ecoe_config:
     for e_round in app.ecoe_rounds:
         try:
             round_status = Manager.load_status_from_file(e_round.status_filename)
-            chrono_status = Manager.load_status_from_file(e_round.chrono.status_filename)
 
-            if len(round_status) > 0 and len(chrono_status) > 0:
-                e_round.state = round_status['state']
+            if len(round_status) > 0:
 
-                e_round.chrono.minutes = chrono_status['minutes']
-                e_round.chrono.seconds = chrono_status['seconds']
-                e_round.chrono.state = chrono_status['state']
+                chrono_status = Manager.load_status_from_file(e_round.chrono.status_filename)
+
+                if len(chrono_status) > 0:
+                    e_round.chrono.minutes = chrono_status['minutes']
+                    e_round.chrono.seconds = chrono_status['seconds']
+                    e_round.chrono.state = chrono_status['state']
 
                 app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
+                                                                       state=round_status['state'],
                                                                        current_rerun=round_status['current_rerun'],
                                                                        idx_schedule=round_status['current_idx_schedule']))
         except:
