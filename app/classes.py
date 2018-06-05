@@ -159,7 +159,8 @@ class Chrono:
         events = schedule['events']
         stage_name = schedule['name']
 
-        self.activate()
+        if self.state == Chrono.CREATED:
+            self.activate()
 
         start_second = self.minutes*60 + self.seconds
 
