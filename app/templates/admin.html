@@ -29,7 +29,7 @@
             });
 
             socket{{ r.id }}.on('tic_tac', function(msg) {
-                $('#clock{{ r.id }}').text(msg.stage.fase + " " + msg.minutes + ":" + msg.seconds);
+                $('#clock{{ r.id }}').text(msg.stage.name + " " + msg.minutes + ":" + msg.seconds);
                 $('#vuelta{{ r.id }}').text(msg.num_rerun + "/" + msg.total_reruns);
 
                 if (msg.stopped == 'S') {

@@ -9,8 +9,8 @@ class Manager:
 
         del app.ecoe_rounds[:]
 
-        for round_id in config['ruedas']:
-            app.ecoe_rounds.append(Round(round_id, config['planificaciones'], config['vueltas']))
+        for round_id in config['rounds_id']:
+            app.ecoe_rounds.append(Round(round_id, config['schedules'], config['reruns']))
 
 
 class Round:
@@ -93,9 +93,9 @@ class Chrono:
 
     def play(self, schedule, current_rerun, total_reruns):
 
-        duration = schedule['duracion']
-        events = schedule['eventos']
-        stage_name = schedule['fase']
+        duration = schedule['duration']
+        events = schedule['events']
+        stage_name = schedule['name']
 
         self.activate()
 
@@ -121,13 +121,14 @@ class Chrono:
             # send events
             for e in events:
                 if e['t'] == t:
-                    print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage_name, self.id, t, ','.join(map(str, e['estaciones']))))
+                    # TODO: Change print values to UTF8 or use logger library
+                    #print (time.strftime("%H:%M:%S") + " [%s] Rueda %d enviando evento en t = %d para %s" % (stage_name, self.id, t, ','.join(map(str, e['stations']))))
                     socketio.emit('evento',
                                   {
-                                      'data': e['accion'],
+                                      'data': e['message'],
                                       'sound': e['sound'],
                                       'stage': schedule,
-                                      'target': ','.join(map(str, e['estaciones']))
+                                      'target': ','.join(map(str, e['stations']))
                                   },
                                   namespace=self.namespace)
 
