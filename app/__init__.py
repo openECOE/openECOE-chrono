@@ -25,36 +25,6 @@ from app import routes
 Reload configuration if exists on start
 """
 
-ecoe_config = None
+from .classes import Manager
 
-try:
-    with open('/tmp/ecoe_config.json', 'r') as json_file:
-        ecoe_config = json.load(json_file)
-except:
-    pass
-
-if ecoe_config:
-    # 1. Create configuration in app memory
-    from .classes import Manager
-    Manager.create_config(ecoe_config)
-
-    # 2. Load objects
-    for e_round in app.ecoe_rounds:
-        try:
-            round_status = Manager.load_status_from_file(e_round.status_filename)
-
-            if len(round_status) > 0:
-
-                chrono_status = Manager.load_status_from_file(e_round.chrono.status_filename)
-
-                if len(chrono_status) > 0:
-                    e_round.chrono.minutes = chrono_status['minutes']
-                    e_round.chrono.seconds = chrono_status['seconds']
-                    e_round.chrono.state = chrono_status['state']
-
-                app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
-                                                                       state=round_status['state'],
-                                                                       current_rerun=round_status['current_rerun'],
-                                                                       idx_schedule=round_status['current_idx_schedule']))
-        except:
-            pass
+Manager.reload_status()

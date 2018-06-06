@@ -38,6 +38,42 @@ class Manager:
         except:
             pass
 
+    @staticmethod
+    def reload_status():
+
+        ecoe_config = None
+
+        try:
+            with open('/tmp/ecoe_config.json', 'r') as json_file:
+                ecoe_config = json.load(json_file)
+        except:
+            pass
+
+        if ecoe_config:
+            # 1. Create configuration in app memory
+            Manager.create_config(ecoe_config)
+
+            # 2. Load objects
+            for e_round in app.ecoe_rounds:
+                try:
+                    round_status = Manager.load_status_from_file(e_round.status_filename)
+
+                    if len(round_status) > 0:
+
+                        chrono_status = Manager.load_status_from_file(e_round.chrono.status_filename)
+
+                        if len(chrono_status) > 0:
+                            e_round.chrono.minutes = chrono_status['minutes']
+                            e_round.chrono.seconds = chrono_status['seconds']
+                            e_round.chrono.state = chrono_status['state']
+
+                        app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
+                                                                               state=round_status['state'],
+                                                                               current_rerun=round_status['current_rerun'],
+                                                                               idx_schedule=round_status['current_idx_schedule']))
+                except:
+                    pass
+
 
 class Round:
 
@@ -80,18 +116,20 @@ class Round:
 
         for n_rerun in range(current_rerun, self.num_reruns + 1):
 
-            for idx, schedule in enumerate(self.schedules[idx_schedule:]):
+            for schedule in self.schedules[idx_schedule:]:
 
                 if self.is_aborted():
                     break
 
                 socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns}, namespace=self.namespace)
-                self.dump(n_rerun, idx)
+                self.dump(n_rerun, idx_schedule)
 
                 self.chrono.play(schedule, current_rerun=n_rerun, total_reruns=self.num_reruns)
 
                 socketio.sleep(1)
                 self.chrono.reset()
+
+                idx_schedule += 1
 
             # reset index for next iteration
             idx_schedule = 0
