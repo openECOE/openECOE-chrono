@@ -28,7 +28,7 @@ Reload configuration if exists on start
 ecoe_config = None
 
 try:
-    with open('ecoe_config.json', 'r') as json_file:
+    with open('/tmp/ecoe_config.json', 'r') as json_file:
         ecoe_config = json.load(json_file)
 except:
     pass

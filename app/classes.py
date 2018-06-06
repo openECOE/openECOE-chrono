@@ -14,7 +14,7 @@ class Manager:
         for round_id in config['rounds_id']:
             app.ecoe_rounds.append(Round(round_id, config['schedules'], config['reruns']))
 
-        with open('ecoe_config.json', 'w') as f:
+        with open('/tmp/ecoe_config.json', 'w') as f:
             json.dump(config, f)
 
     @staticmethod
@@ -72,7 +72,7 @@ class Round:
 
     @property
     def status_filename(self):
-        return 'round.%d.status' % self.id
+        return '/tmp/round.%d.status' % self.id
 
     def start(self, state=RUNNING, current_rerun=1, idx_schedule=0):
 
@@ -139,7 +139,7 @@ class Chrono:
 
     @property
     def status_filename(self):
-        return 'chrono.%d.status' % self.id
+        return '/tmp/chrono.%d.status' % self.id
 
     def _create_tic_tac_dict(self, t, current_rerun, total_reruns, schedule):
 
