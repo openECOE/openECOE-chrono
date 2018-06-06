@@ -1,5 +1,7 @@
 import time
 from app import socketio, app
+import json
+import os
 
 
 class Manager:
@@ -11,6 +13,66 @@ class Manager:
 
         for round_id in config['rounds_id']:
             app.ecoe_rounds.append(Round(round_id, config['schedules'], config['reruns']))
+
+        with open('/tmp/ecoe_config.json', 'w') as f:
+            json.dump(config, f)
+
+    @staticmethod
+    def load_status_from_file(filename):
+
+        status = {}
+
+        try:
+            with open(filename, 'r') as json_file:
+                status = json.load(json_file)
+        except FileNotFoundError:
+            pass
+
+        return status
+
+    @staticmethod
+    def delete_file(filename):
+
+        try:
+            os.remove(filename)
+        except:
+            pass
+
+    @staticmethod
+    def reload_status():
+
+        ecoe_config = None
+
+        try:
+            with open('/tmp/ecoe_config.json', 'r') as json_file:
+                ecoe_config = json.load(json_file)
+        except:
+            pass
+
+        if ecoe_config:
+            # 1. Create configuration in app memory
+            Manager.create_config(ecoe_config)
+
+            # 2. Load objects
+            for e_round in app.ecoe_rounds:
+                try:
+                    round_status = Manager.load_status_from_file(e_round.status_filename)
+
+                    if len(round_status) > 0:
+
+                        chrono_status = Manager.load_status_from_file(e_round.chrono.status_filename)
+
+                        if len(chrono_status) > 0:
+                            e_round.chrono.minutes = chrono_status['minutes']
+                            e_round.chrono.seconds = chrono_status['seconds']
+                            e_round.chrono.state = chrono_status['state']
+
+                        app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
+                                                                               state=round_status['state'],
+                                                                               current_rerun=round_status['current_rerun'],
+                                                                               idx_schedule=round_status['current_idx_schedule']))
+                except:
+                    pass
 
 
 class Round:
@@ -33,23 +95,44 @@ class Round:
     def is_aborted(self):
         return self.state == Round.ABORTED
 
-    def start(self):
+    def dump(self, current_rerun, current_idx_schedule):
 
-        self.state = Round.RUNNING
+        status = {
+            'state': self.state,
+            'current_rerun': current_rerun,
+            'current_idx_schedule': current_idx_schedule
+        }
 
-        for n_rerun in range(1, self.num_reruns + 1):
+        with open(self.status_filename, 'w') as f:
+            json.dump(status, f)
 
-            for schedule in self.schedules:
+    @property
+    def status_filename(self):
+        return '/tmp/round.%d.status' % self.id
+
+    def start(self, state=RUNNING, current_rerun=1, idx_schedule=0):
+
+        self.state = state
+
+        for n_rerun in range(current_rerun, self.num_reruns + 1):
+
+            for schedule in self.schedules[idx_schedule:]:
 
                 if self.is_aborted():
                     break
 
                 socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns}, namespace=self.namespace)
+                self.dump(n_rerun, idx_schedule)
 
                 self.chrono.play(schedule, current_rerun=n_rerun, total_reruns=self.num_reruns)
 
                 socketio.sleep(1)
                 self.chrono.reset()
+
+                idx_schedule += 1
+
+            # reset index for next iteration
+            idx_schedule = 0
 
             if self.is_aborted():
                 socketio.emit('aborted', {}, namespace=self.namespace)
@@ -57,6 +140,8 @@ class Round:
 
         if not self.is_aborted():
             socketio.emit('end_round', {'data': 'Fin rueda %s' % self.id}, namespace=self.namespace)
+
+        Manager.delete_file(self.status_filename)
 
 
 class Chrono:
@@ -79,6 +164,21 @@ class Chrono:
         self.minutes = 0
         self.seconds = 0
 
+    def dump(self):
+
+        status = {
+            'minutes': self.minutes,
+            'seconds': self.seconds,
+            'state': self.state
+        }
+
+        with open(self.status_filename, 'w') as f:
+            json.dump(status, f)
+
+    @property
+    def status_filename(self):
+        return '/tmp/chrono.%d.status' % self.id
+
     def _create_tic_tac_dict(self, t, current_rerun, total_reruns, schedule):
 
         return {
@@ -97,9 +197,12 @@ class Chrono:
         events = schedule['events']
         stage_name = schedule['name']
 
-        self.activate()
+        if self.state == Chrono.CREATED:
+            self.activate()
 
-        for t in range(duration + 1):
+        start_second = self.minutes*60 + self.seconds
+
+        for t in range(start_second, duration + 1):
 
             if self.state == Chrono.FINISHED:
                 break
@@ -113,6 +216,7 @@ class Chrono:
             tic_tac = self._create_tic_tac_dict(t, current_rerun, total_reruns, schedule)
 
             socketio.emit('tic_tac', tic_tac, namespace=self.namespace)
+            self.dump()
 
             while self.is_paused():
                 socketio.emit('tic_tac', tic_tac, namespace=self.namespace)
@@ -143,6 +247,7 @@ class Chrono:
 
     def stop(self):
         self.state = Chrono.FINISHED
+        Manager.delete_file(self.status_filename)
 
     def pause(self):
         self.state = Chrono.PAUSED

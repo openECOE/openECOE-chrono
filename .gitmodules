@@ -1,3 +1,5 @@
 [submodule "deploy"]
 	path = deploy
 	url = git@github.com:openECOE/openECOE-deploy.git
+	branch = master
+	ignore = dirty
