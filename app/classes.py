@@ -4,7 +4,9 @@ import json
 import os
 
 
+
 class Manager:
+    filename = '/tmp/ecoe_config.json'
 
     @staticmethod
     def create_config(config):
@@ -14,8 +16,12 @@ class Manager:
         for round_id in config['rounds_id']:
             app.ecoe_rounds.append(Round(round_id, config['schedules'], config['reruns']))
 
-        with open('/tmp/ecoe_config.json', 'w') as f:
+        with open(Manager.filename, 'w') as f:
             json.dump(config, f)
+
+    @staticmethod
+    def delete_config():
+        Manager.delete_file(Manager.filename)
 
     @staticmethod
     def load_status_from_file(filename):

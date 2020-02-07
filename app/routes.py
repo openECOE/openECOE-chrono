@@ -3,6 +3,8 @@ from .classes import Manager
 
 from flask import render_template, request
 
+import json
+
 
 @app.route('/<int:station_id>/<int:round_id>')
 def index(station_id, round_id):
@@ -16,12 +18,16 @@ def admin():
 
 @app.route('/abort', methods=['POST'])
 def abort_all():
+    data = request.get_json()
 
-    for e_round in app.ecoe_rounds:
-        e_round.abort()
-        e_round.chrono.stop()
-
-    return '', 200
+    # Only abort if "tfc" is the same in the file and the param send
+    if check_tfc(data['tfc']):
+        for e_round in app.ecoe_rounds:
+            e_round.abort()
+            e_round.chrono.stop()
+        return '', 200
+    else:
+        return 'Not authorized', 401
 
 
 def manage_chronos(active, round_id):
@@ -41,22 +47,30 @@ def manage_chronos(active, round_id):
             e_rounds[0].chrono.pause()
 
 
-@app.route('/pause')
-@app.route('/pause/<int:round_id>')
+@app.route('/pause', methods=['POST'])
+@app.route('/pause/<int:round_id>', methods=['POST'])
 def pause_chronos(round_id=None):
+    data = request.get_json()
 
-    manage_chronos(active=False, round_id=round_id)
+    # Only pause if "tfc" is the same in the file and the param send
+    if check_tfc(data['tfc']):
+        manage_chronos(active=False, round_id=round_id)
+        return '', 200
+    else:
+        return 'Not authorized', 401
 
-    return '', 200
 
-
-@app.route('/play')
-@app.route('/play/<int:round_id>')
+@app.route('/play', methods=['POST'])
+@app.route('/play/<int:round_id>', methods=['POST'])
 def play_chronos(round_id=None):
+    data = request.get_json()
 
-    manage_chronos(active=True, round_id=round_id)
-
-    return '', 200
+    # Only play if "tfc" is the same in the file and the param send
+    if check_tfc(data['tfc']):
+        manage_chronos(active=True, round_id=round_id)
+        return '', 200
+    else:
+        return 'Not authorized', 401
 
 
 def has_threads_alive():
@@ -75,18 +89,44 @@ def load_configuration():
     else:
         return 'No cargado porque los cronos ya están iniciados', 409
 
-
-@app.route('/start')
-def start_chronos():
-
+@app.route('/', methods=['DELETE'])
+def delete_configuration():
     if not has_threads_alive():
 
-        for e_round in app.ecoe_rounds:
-            app.ecoe_threads.append(socketio.start_background_task(target=e_round.start))
+        Manager.delete_config()
 
         return 'OK', 200
     else:
-        return 'Cronos ya iniciados', 409
+        return 'No eliminado porque los cronos ya están iniciados', 409
+
+
+
+@app.route('/start', methods=['POST'])
+def start_chronos():
+    data = request.get_json()
+
+    # Only start if "tfc" is the same in the file and the param send
+    if check_tfc(data['tfc']):
+
+        if not has_threads_alive():
+
+            for e_round in app.ecoe_rounds:
+                app.ecoe_threads.append(socketio.start_background_task(target=e_round.start))
+
+            return 'OK', 200
+        else:
+            return 'Cronos ya iniciados', 409
+    else:
+        return 'Acceso no permitido', 401
+
+def check_tfc(tfc):
+    try:
+        with open(Manager.filename, 'r') as json_file:
+            ecoe_config = json.load(json_file)
+    except:
+        return False
+
+    return ecoe_config['tfc'] == tfc
 
 
 ###############################
