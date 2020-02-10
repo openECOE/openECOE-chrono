@@ -120,14 +120,14 @@ def start_chronos():
     else:
         return 'Acceso no permitido', 401
 
-def check_tfc(tfc):
+def check_tfc(tfc, filename = Manager.filename):
     try:
-        with open(Manager.filename, 'r') as json_file:
-            ecoe_config = json.load(json_file)
+        ecoe_config = Manager.load_status_from_file(filename)
+        file_tfc = ecoe_config['tfc']
     except:
         return False
 
-    return ecoe_config['tfc'] == tfc
+    return file_tfc == tfc
 
 
 @app.route('/configurations')
@@ -138,7 +138,12 @@ def get_configurations():
 
     for file in files:
         if file.endswith('.json'):
-            config.append(Manager.load_status_from_file(path + file))
+            conf = Manager.load_status_from_file(path + file)
+            #If tfc exists, remove from configurations info
+            if 'tfc' in conf:
+                del conf['tfc']
+
+            config.append(conf)
 
     return json.dumps(config), 200
 

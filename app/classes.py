@@ -25,7 +25,6 @@ class Manager:
 
     @staticmethod
     def load_status_from_file(filename):
-
         status = {}
 
         try:
@@ -75,10 +74,8 @@ class Manager:
 
                         app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
                                                                                state=round_status['state'],
-                                                                               current_rerun=round_status[
-                                                                                   'current_rerun'],
-                                                                               idx_schedule=round_status[
-                                                                                   'current_idx_schedule']))
+                                                                               current_rerun=round_status['current_rerun'],
+                                                                               idx_schedule=round_status['current_idx_schedule']))
                 except:
                     pass
 
@@ -132,8 +129,7 @@ class Round:
                 if self.is_aborted():
                     break
 
-                socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns},
-                              namespace=self.namespace)
+                socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns}, namespace=self.namespace)
                 self.dump(n_rerun, idx_schedule)
 
                 self.chrono.play(schedule, current_rerun=n_rerun, total_reruns=self.num_reruns)
