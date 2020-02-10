@@ -1,5 +1,6 @@
 from . import socketio, app
 from .classes import Manager
+import json
 
 from flask import render_template, request
 
@@ -127,6 +128,19 @@ def check_tfc(tfc):
         return False
 
     return ecoe_config['tfc'] == tfc
+
+
+@app.route('/configurations')
+def get_configurations():
+    path = '/tmp/'
+    files = Manager.get_list_files(path)
+    config = []
+
+    for file in files:
+        if file.endswith('.json'):
+            config.append(Manager.load_status_from_file(path + file))
+
+    return json.dumps(config), 200
 
 
 ###############################

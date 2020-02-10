@@ -75,14 +75,19 @@ class Manager:
 
                         app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
                                                                                state=round_status['state'],
-                                                                               current_rerun=round_status['current_rerun'],
-                                                                               idx_schedule=round_status['current_idx_schedule']))
+                                                                               current_rerun=round_status[
+                                                                                   'current_rerun'],
+                                                                               idx_schedule=round_status[
+                                                                                   'current_idx_schedule']))
                 except:
                     pass
 
+    @staticmethod
+    def get_list_files(path):
+        return os.listdir(path)
+
 
 class Round:
-
     CREATED = 0
     RUNNING = 1
     ABORTED = 2
@@ -127,7 +132,8 @@ class Round:
                 if self.is_aborted():
                     break
 
-                socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns}, namespace=self.namespace)
+                socketio.emit('init_stage', {'num_rerun': n_rerun, 'total_reruns': self.num_reruns},
+                              namespace=self.namespace)
                 self.dump(n_rerun, idx_schedule)
 
                 self.chrono.play(schedule, current_rerun=n_rerun, total_reruns=self.num_reruns)
@@ -151,7 +157,6 @@ class Round:
 
 
 class Chrono:
-
     CREATED = 0
     RUNNING = 1
     PAUSED = 2
@@ -206,7 +211,7 @@ class Chrono:
         if self.state == Chrono.CREATED:
             self.activate()
 
-        start_second = self.minutes*60 + self.seconds
+        start_second = self.minutes * 60 + self.seconds
 
         for t in range(start_second, duration + 1):
 
