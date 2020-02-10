@@ -4,7 +4,9 @@ import json
 import os
 
 
+
 class Manager:
+    filename = '/tmp/ecoe_config.json'
 
     @staticmethod
     def create_config(config):
@@ -14,12 +16,15 @@ class Manager:
         for round_id in config['rounds_id']:
             app.ecoe_rounds.append(Round(round_id, config['schedules'], config['reruns']))
 
-        with open('/tmp/ecoe_config.json', 'w') as f:
+        with open(Manager.filename, 'w') as f:
             json.dump(config, f)
 
     @staticmethod
-    def load_status_from_file(filename):
+    def delete_config():
+        Manager.delete_file(Manager.filename)
 
+    @staticmethod
+    def load_status_from_file(filename):
         status = {}
 
         try:
@@ -74,9 +79,12 @@ class Manager:
                 except:
                     pass
 
+    @staticmethod
+    def get_list_files(path):
+        return os.listdir(path)
+
 
 class Round:
-
     CREATED = 0
     RUNNING = 1
     ABORTED = 2
@@ -145,7 +153,6 @@ class Round:
 
 
 class Chrono:
-
     CREATED = 0
     RUNNING = 1
     PAUSED = 2
@@ -200,7 +207,7 @@ class Chrono:
         if self.state == Chrono.CREATED:
             self.activate()
 
-        start_second = self.minutes*60 + self.seconds
+        start_second = self.minutes * 60 + self.seconds
 
         for t in range(start_second, duration + 1):
 
