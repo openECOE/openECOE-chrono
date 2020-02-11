@@ -5,15 +5,20 @@ import json
 from flask import render_template, request
 from functools import wraps
 
+
 def requires_tfc(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         tfc_header = request.headers.get('tfc')
-
-        # Only start if "tfc" is the same in the file and the param send
-        if not check_tfc(tfc_header):
+        ecoe_id = ''
+        if 'ecoe_id' in kwargs:
+            ecoe_id = kwargs['ecoe_id']
+        # # Only start if "tfc" is the same in the file and the param send
+        if not check_tfc(tfc_header, ecoe_id):
             return 'Not authorized', 401
-        return f(*args, **kwargs)
+        else:
+            return f(*args, **kwargs)
+
     return decorated
 
 
@@ -24,26 +29,33 @@ def index(station_id, round_id):
 
 @app.route('/admin')
 def admin():
-    return render_template('admin.html', rounds=app.ecoe_rounds)
+    return render_template('admin.html', ecoes=app.ecoes)
 
-@app.route('/abort', methods=['POST'])
+
+@app.route('/abort/<int:ecoe_id>', methods=['POST'])
 @requires_tfc
-def abort_all():
-    for e_round in app.ecoe_rounds:
-        e_round.abort()
-        e_round.chrono.stop()
-    return '', 200
+def abort_all(ecoe_id):
+    ecoe = Manager.find_ecoe(ecoe_id)
+    if ecoe is not None:
+        for e_round in ecoe.rounds:
+            e_round.abort()
+            e_round.chrono.stop()
+        return '', 200
+    else:
+        return 'ECOE %d not found'%ecoe_id, 404
 
-def manage_chronos(active, round_id):
+
+def manage_chronos(active, ecoe_id, round_id):
+    ecoe = Manager.find_ecoe(ecoe_id)
 
     if round_id is None:
-        for e_round in app.ecoe_rounds:
+        for e_round in ecoe.rounds:
             if active:
                 e_round.chrono.activate()
             else:
                 e_round.chrono.pause()
     else:
-        e_rounds = [c for c in app.ecoe_rounds if c.id == round_id]
+        e_rounds = [c for c in ecoe.rounds if c.id == round_id]
 
         if active:
             e_rounds[0].chrono.activate()
@@ -51,88 +63,97 @@ def manage_chronos(active, round_id):
             e_rounds[0].chrono.pause()
 
 
-@app.route('/pause', methods=['POST'])
-@app.route('/pause/<int:round_id>', methods=['POST'])
+@app.route('/pause/<int:ecoe_id>', methods=['POST'])
+@app.route('/pause/<int:ecoe_id>/<int:round_id>', methods=['POST'])
 @requires_tfc
-def pause_chronos(round_id=None):
-    manage_chronos(active=False, round_id=round_id)
+def pause_chronos(ecoe_id, round_id=None):
+    manage_chronos(active=False, ecoe_id=ecoe_id, round_id=round_id)
     return '', 200
 
-@app.route('/play', methods=['POST'])
-@app.route('/play/<int:round_id>', methods=['POST'])
+
+@app.route('/play/<int:ecoe_id>', methods=['POST'])
+@app.route('/play/<int:ecoe_id>/<int:round_id>', methods=['POST'])
 @requires_tfc
-def play_chronos(round_id=None):
-    manage_chronos(active=True, round_id=round_id)
+def play_chronos(ecoe_id, round_id=None):
+    manage_chronos(active=True, ecoe_id=ecoe_id, round_id=round_id)
     return '', 200
 
-def has_threads_alive():
 
-    return True in [t.is_alive() for t in app.ecoe_threads]
+def has_threads_alive(ecoe_id):
+    ecoe = Manager.find_ecoe(ecoe_id)
+    if ecoe is None:
+        return False
+    else:
+        return True in [t.is_alive() for t in ecoe.threads]
 
 
 @app.route('/load', methods=['POST'])
 def load_configuration():
+    config = request.get_json()
+    if 'ecoe' in config:
+        ecoe_id = config['ecoe']['id']
 
-    if not has_threads_alive():
+        if not has_threads_alive(ecoe_id):
 
-        Manager.create_config(request.get_json())
+            Manager.create_config(config)
 
-        return 'OK', 200
+            return 'OK', 200
+        else:
+            return 'No cargado porque los cronos ya están iniciados', 409
     else:
-        return 'No cargado porque los cronos ya están iniciados', 409
+        return 'Config error', 500
 
-@app.route('/', methods=['DELETE'])
+
+@app.route('/<int:ecoe_id>', methods=['DELETE'])
 @requires_tfc
-def delete_configuration():
-    if not has_threads_alive():
+def delete_configuration(ecoe_id):
+    if not has_threads_alive(ecoe_id):
 
-        Manager.delete_config()
+        Manager.delete_config(ecoe_id)
 
         return 'OK', 200
     else:
         return 'No eliminado porque los cronos ya están iniciados', 409
 
 
-
-@app.route('/start', methods=['POST'])
+@app.route('/start/<int:ecoe_id>', methods=['POST'])
 @requires_tfc
-def start_chronos():
-    if not has_threads_alive():
+def start_chronos(ecoe_id):
+    if not has_threads_alive(ecoe_id):
 
-        for e_round in app.ecoe_rounds:
-            app.ecoe_threads.append(socketio.start_background_task(target=e_round.start))
+        ecoe = Manager.find_ecoe(ecoe_id)
 
-        return 'OK', 200
+        if ecoe is not None:
+            for e_round in ecoe.rounds:
+                ecoe.threads.append(socketio.start_background_task(target=e_round.start))
+
+            return 'OK', 200
+        else:
+            return 'ECOE %d not found' % ecoe_id, 404
     else:
         return 'Cronos ya iniciados', 409
 
 
-def check_tfc(tfc, filename = Manager.filename):
-    try:
-        ecoe_config = Manager.load_status_from_file(filename)
-        file_tfc = ecoe_config['tfc']
-    except:
-        return False
+def check_tfc(tfc, ecoe_id):
+    ecoe = Manager.find_ecoe(ecoe_id)
 
-    return file_tfc == tfc
+    if ecoe is None:
+        return False
+    else:
+        return tfc == ecoe.tfc
 
 
 @app.route('/configurations')
-def get_configurations():
-    path = '/tmp/'
-    files = Manager.get_list_files(path)
-    config = []
+@app.route('/configurations/<int:ecoe_id>')
+def get_configurations(ecoe_id=None):
+    configs = Manager.get_ecoe_config_files(ecoe_id)
 
-    for file in files:
-        if file.endswith('.json'):
-            conf = Manager.load_status_from_file(path + file)
-            #If tfc exists, remove from configurations info
-            if 'tfc' in conf:
-                del conf['tfc']
+    for conf in configs:
+        # If tfc exists, remove from configurations info
+        if 'tfc' in conf:
+            del conf['tfc']
 
-            config.append(conf)
-
-    return json.dumps(config), 200
+    return json.dumps(configs), 200
 
 
 ###############################
