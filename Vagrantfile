@@ -20,7 +20,7 @@ Vagrant.configure("2") do |config|
         ansible.provisioning_path = "/tmp/deploy"
         #ansible.galaxy_role_file = "requeriments.yml"
         ansible.inventory_path = "inventory/develop"
-        ansible.playbook = "setup.chrono.yml"
+        ansible.playbook = "setup.yml"
     end
 
     config.vm.provider "virtualbox" do |v|
