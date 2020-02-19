@@ -1,6 +1,6 @@
 click==6.7
 enum34==1.1.6
-eventlet==0.23.0
+eventlet==0.25.0
 Flask==1.0.2
 Flask-SocketIO==3.0.0
 greenlet==0.4.13
@@ -11,4 +11,4 @@ python-engineio==2.1.0
 python-socketio==1.9.0
 six==1.11.0
 Werkzeug==0.14.1
-flask-cors
+flask-cors==3.0.8
