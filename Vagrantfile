@@ -1,16 +1,18 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+LOCAL_DOMAIN = "local.openecoe.es"
+
 Vagrant.configure("2") do |config|
     config.vm.box = "ubuntu/bionic64"
     config.vm.define "develop"
-    config.vm.hostname = "openecoe-chrono-dev"
+    config.vm.hostname = LOCAL_DOMAIN
     
     config.vm.network "public_network"
     config.vm.synced_folder "./deploy/ansible", "/tmp/deploy", mount_options: ["dmode=775,fmode=664"]
 
     config.vm.synced_folder ".", "/vagrant", disabled: true
-    config.vm.synced_folder ".", "/opt/openECOE-CHRONO"
+    config.vm.synced_folder ".", "/opt/"+LOCAL_DOMAIN+"/openECOE-CHRONO"
     
     config.vm.network "private_network", ip: "192.168.11.23"
 
@@ -18,9 +20,9 @@ Vagrant.configure("2") do |config|
         ansible.verbose = "v"
         ansible.limit = "chrono"
         ansible.provisioning_path = "/tmp/deploy"
-        #ansible.galaxy_role_file = "requeriments.yml"
         ansible.inventory_path = "inventory/develop"
-        ansible.playbook = "setup.chrono.yml"
+        ansible.playbook = "setup.yml"
+        ansible.extra_vars = {domain: LOCAL_DOMAIN}
     end
 
     config.vm.provider "virtualbox" do |v|
