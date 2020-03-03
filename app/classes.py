@@ -4,22 +4,34 @@ import json
 import os
 
 
+
 class Manager:
+    path = '/tmp/'
+    file_template = path + 'config_ecoe_%d.json'
 
     @staticmethod
     def create_config(config):
+        ecoe = ECOE(config)
 
-        del app.ecoe_rounds[:]
+        app.ecoes.append(ecoe)
+        filename = Manager.file_template % ecoe.id
 
-        for round_id in config['rounds_id']:
-            app.ecoe_rounds.append(Round(round_id, config['schedules'], config['reruns']))
-
-        with open('/tmp/ecoe_config.json', 'w') as f:
+        with open(filename, 'w') as f:
             json.dump(config, f)
+
+        return ecoe
+
+    @staticmethod
+    def delete_config(ecoe_id):
+        try:
+            app.ecoes.remove(Manager.find_ecoe(ecoe_id))
+        except ValueError:
+            pass
+        filename = Manager.file_template % ecoe_id
+        Manager.delete_file(filename)
 
     @staticmethod
     def load_status_from_file(filename):
-
         status = {}
 
         try:
@@ -41,20 +53,14 @@ class Manager:
     @staticmethod
     def reload_status():
 
-        ecoe_config = None
+        ecoe_configs = Manager.get_ecoe_config_files()
 
-        try:
-            with open('/tmp/ecoe_config.json', 'r') as json_file:
-                ecoe_config = json.load(json_file)
-        except:
-            pass
-
-        if ecoe_config:
+        for ecoe_config in ecoe_configs:
             # 1. Create configuration in app memory
-            Manager.create_config(ecoe_config)
+            ecoe = Manager.create_config(ecoe_config)
 
             # 2. Load objects
-            for e_round in app.ecoe_rounds:
+            for e_round in ecoe.rounds:
                 try:
                     round_status = Manager.load_status_from_file(e_round.status_filename)
 
@@ -67,16 +73,54 @@ class Manager:
                             e_round.chrono.seconds = chrono_status['seconds']
                             e_round.chrono.state = chrono_status['state']
 
-                        app.ecoe_threads.append(socketio.start_background_task(target=e_round.start,
+                        ecoe.threads.append(socketio.start_background_task(target=e_round.start,
                                                                                state=round_status['state'],
                                                                                current_rerun=round_status['current_rerun'],
                                                                                idx_schedule=round_status['current_idx_schedule']))
                 except:
                     pass
 
+    @staticmethod
+    def get_list_files(path):
+        return os.listdir(path)
+
+    @staticmethod
+    def get_ecoe_config_files(ecoe_id=None):
+        path = Manager.path
+        files = Manager.get_list_files(path)
+        configs = []
+        if ecoe_id is not None:
+            configs.append(Manager.load_status_from_file(path + Manager.file_template%ecoe_id))
+        else:
+            for file in files:
+                if file.endswith('.json'):
+                    conf = Manager.load_status_from_file(path + file)
+                    configs.append(conf)
+
+        return configs
+
+
+    @staticmethod
+    def find_ecoe(ecoe_id):
+        return next((x for x in app.ecoes if x.id == ecoe_id), None)
+
+class ECOE:
+    def __init__(self, config):
+        ecoe_config = config['ecoe']
+
+        # Try to delete previous config
+        Manager.delete_config(ecoe_config['id'])
+
+        self.id = ecoe_config['id']
+        self.name = ecoe_config['name']
+        self.time_start = ecoe_config['time_start']
+        self.tfc = config['tfc']
+        self.rounds = []
+        self.threads = []
+        for r in config['rounds']:
+            self.rounds.append(Round(r['id'], config['schedules'], config['reruns']))
 
 class Round:
-
     CREATED = 0
     RUNNING = 1
     ABORTED = 2
@@ -145,7 +189,6 @@ class Round:
 
 
 class Chrono:
-
     CREATED = 0
     RUNNING = 1
     PAUSED = 2
@@ -200,7 +243,7 @@ class Chrono:
         if self.state == Chrono.CREATED:
             self.activate()
 
-        start_second = self.minutes*60 + self.seconds
+        start_second = self.minutes * 60 + self.seconds
 
         for t in range(start_second, duration + 1):
 
