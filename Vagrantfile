@@ -4,9 +4,9 @@
 LOCAL_DOMAIN = "local.openecoe.es"
 
 Vagrant.configure("2") do |config|
-    config.vm.box = "ubuntu/bionic64"
+    config.vm.box = "ubuntu/eoan64"
     config.vm.define "develop"
-    config.vm.hostname = LOCAL_DOMAIN
+    config.vm.hostname = "openecoe-chrono-dev"
     
     config.vm.network "public_network"
     config.vm.synced_folder "./deploy/ansible", "/tmp/deploy", mount_options: ["dmode=775,fmode=664"]
@@ -22,7 +22,7 @@ Vagrant.configure("2") do |config|
         ansible.provisioning_path = "/tmp/deploy"
         ansible.inventory_path = "inventory/develop"
         ansible.playbook = "setup.yml"
-        ansible.extra_vars = {domain: LOCAL_DOMAIN}
+        ansible.extra_vars = "@./configurations/template.conf"
     end
 
     config.vm.provider "virtualbox" do |v|
